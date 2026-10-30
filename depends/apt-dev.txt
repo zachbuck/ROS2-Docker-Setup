@@ -1,4 +1,1 @@
 # Put apt packages for debugging here, seperated by line, comments with `#` supported
-
-ros-humble-rqt
-ros-humble-rqt-common-plugins

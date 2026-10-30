@@ -2,3 +2,4 @@ build
 workspace/build
 workspace/install
 workspace/log
+.vscode

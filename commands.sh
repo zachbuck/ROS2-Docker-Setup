@@ -1,5 +1,20 @@
 #!/bin/bash
 
+function _start_apt_cache() {
+	docker run -d \
+		--name "${WORKSPACE}-apt-cache" \
+		--init \
+		--publish 3142:3142 \
+		--volume "${WORKSPACE}-apt-cache:/var/cache/apt-cacher-ng" \
+		sameersbn/apt-cacher-ng:latest \
+		> /dev/null
+}
+
+function _stop_apt_cache() {
+	docker stop "${WORKSPACE}-apt-cache" > /dev/null
+	docker rm "${WORKSPACE}-apt-cache" > /dev/null
+}
+
 function build() {
 	# flags
 	COPY_LOCAL=0
@@ -35,10 +50,14 @@ function build() {
 		esac
 	done
 
+	_start_apt_cache
+
 	docker build \
 		--target build \
 		-t "${WORKSPACE}-build:latest" \
 		.
+
+	_stop_apt_cache
 
 	if [ $COPY_LOCAL -eq 1 ]; then
 		rm -rf build/build build/install build/log
@@ -86,11 +105,17 @@ function run() {
 		esac
 	done
 
+	_start_apt_cache
+
 	docker build \
 		--target "runtime" \
 		--build-arg TARGET=${TARGET} \
 		--tag "${WORKSPACE}-${TARGET}:latest" \
 		.
+
+	_stop_apt_cache
+
+	echo "Running ${WORKSPACE}"
 
 	docker run \
 		--attach stdout \
@@ -98,4 +123,14 @@ function run() {
 		--name "${WORKSPACE}-${TARGET}" \
 		--rm \
 		"${WORKSPACE}-${TARGET}:latest"
+}
+
+function connect() {
+	WORKSPACE=${!1:-workspace}
+
+	docker exec \
+		--interactive \
+		--tty \
+		"${WORKSPACE}-dev" \
+		"/bin/bash"
 }
